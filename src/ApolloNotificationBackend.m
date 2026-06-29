@@ -3,6 +3,7 @@
 #import "ApolloState.h"
 #import "UserDefaultConstants.h"
 #import "ApolloAccountCredentials.h"
+#import "ApolloWebSessionStore.h"
 
 // Legacy hosts that previously routed to christianselig/apollo-backend. All
 // three are blocked by the existing blocklist in Tweak.xm; when a backend URL
@@ -143,11 +144,32 @@ static BOOL ApolloPathRequiresRegistrationToken(NSString *path) {
 // default. This keeps backend push registration correct even when different
 // accounts use different Reddit API clients (see ApolloAccountCredentials.h).
 static NSDictionary<NSString *, NSString *> *ApolloRedditCredentialsForRegistration(NSString *username) {
+    ApolloWebSessionEntry *webSession = username.length > 0 ? ApolloWebSessionFor(username) : nil;
+    if (webSession.cookieHeader.length > 0) {
+        NSURL *backendURL = ApolloNotificationBackendBaseURL();
+        if (![backendURL.scheme.lowercaseString isEqualToString:@"https"]) {
+            ApolloLog(@"[NotifBackend] Refusing to send web-session credentials over non-HTTPS backend");
+            return @{
+                @"reddit_auth_type": @"web_session",
+                @"reddit_session_cookie": @"",
+                @"reddit_modhash": @"",
+                @"reddit_user_agent": sUserAgent ?: @"",
+            };
+        }
+        return @{
+            @"reddit_auth_type": @"web_session",
+            @"reddit_session_cookie": webSession.cookieHeader,
+            @"reddit_modhash": webSession.modhash ?: @"",
+            @"reddit_user_agent": sUserAgent ?: @"",
+        };
+    }
+
     ApolloAccountCredentialEntry *entry = username.length > 0 ? ApolloAccountCredentialsFor(username) : nil;
     NSString *clientId = (entry && entry.clientId.length > 0) ? entry.clientId : (sRedditClientId ?: @"");
     NSString *clientSecret = (entry && entry.clientSecret.length > 0) ? entry.clientSecret : (sRedditClientSecret ?: @"");
     NSString *redirectURI = (entry && entry.redirectURI.length > 0) ? entry.redirectURI : (sRedirectURI ?: @"");
     return @{
+        @"reddit_auth_type":      @"oauth",
         @"reddit_client_id":     clientId,
         @"reddit_client_secret": clientSecret,
         @"reddit_redirect_uri":  redirectURI,
