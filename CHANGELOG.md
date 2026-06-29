@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [v3.3.1] - 2026-06-29
+
+### Features
+
+- Add experimental **Web Session Cookie Login** support for push notifications. Allows logging in via session cookies to securely bypass OAuth restrictions and receive notifications via the custom backend.
+
 ## [v3.3.0] - 2026-06-26
 
 ### Features
